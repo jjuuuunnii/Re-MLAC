@@ -110,18 +110,25 @@ def send_request(data, filename):
     logging.info(f"All rows have been processed for {filename}")
     db_connection.close()
 
+
 def load_data():
-    filenames = [f"../data/origin/re_cm_unsw_nb15_{i}.csv" for i in range(1, 31)]
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.join(script_dir, '..')
+    filenames = [os.path.join(project_root, f"data/origin/re_cm_unsw_nb15_{i}.csv") for i in range(1, 31)]
+    
     datas = []
+    processed_indices = {}
+    
     for fn in filenames:
         try:
             data = pd.read_csv(fn)
             datas.append((fn, data))
             logging.info(f'Successfully loaded {fn}')
-            processed_indices[fn] = set()  # 각 파일에 대한 processed_indices 초기화
+            processed_indices[fn] = set()  
         except Exception as e:
             logging.error(f'{fn} could not be loaded: {str(e)}')
-            continue  # 읽기 실패 시 해당 파일을 건너뜁니다.
+            continue  
+    
     return datas
 
 def send_multiple_requests(datas):
