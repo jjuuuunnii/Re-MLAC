@@ -110,7 +110,6 @@ def send_request(data, filename):
     logging.info(f"All rows have been processed for {filename}")
     db_connection.close()
 
-
 def load_data():
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.join(script_dir, '..')
@@ -129,9 +128,9 @@ def load_data():
             logging.error(f'{fn} could not be loaded: {str(e)}')
             continue  
     
-    return datas
+    return datas, processed_indices
 
-def send_multiple_requests(datas):
+def send_multiple_requests(datas, processed_indices):
     logging.info("Starting send_multiple_requests")
     threads = []
 
@@ -140,24 +139,17 @@ def send_multiple_requests(datas):
         threads.append(thread)
         thread.start()
 
-    for thread in threads:
-        thread.join()
-
-    logging.info("Completed send_multiple_requests")
-
-def log_remaining_data(datas):
-    while any(len(processed_indices[fn]) < len(data) for fn, data in datas):
+    while any(thread.is_alive() for thread in threads):
         with log_lock:
             total_remaining = sum(len(data) - len(processed_indices[fn]) for fn, data in datas)
             logging.info(f"{total_remaining} data remaining.")
         time.sleep(10)  # 10초마다 로그 출력
 
+    for thread in threads:
+        thread.join()
+
+    logging.info("Completed send_multiple_requests")
+
 if __name__ == "__main__":
-    datas = load_data()
-
-    logging_thread = threading.Thread(target=log_remaining_data, args=(datas,))
-    logging_thread.start()
-
-    send_multiple_requests(datas)
-
-    logging_thread.join()
+    datas, processed_indices = load_data()
+    send_multiple_requests(datas, processed_indices)
